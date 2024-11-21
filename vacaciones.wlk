@@ -1,13 +1,19 @@
-class Lugar{
+class Lugar{ // usamos herencia porque un balenario no deja de ser un balneario, etc, NO CAMBIAN, ES ESTATICO
     const property nombre
 
     method letrasDelNombre() = nombre.size()
+    // si hacemos self.nombre() permite que dentro del metodo nombre pueda llegar a cambiar, se llama ACCESO INDIRECTO
+    // si hacemos nombre, hago referencia directa a una variable, se llama ACCESO DIRECTO
 
-    method esDivertido() = self.letrasDelNombre().even() && self.condicionSegunTipo() 
+    method esDivertido() = self.letrasDelNombre().even() && self.condicionSegunCiudad()  // ESTE SE LLAMA TEMPLATE
 
-    method condicionSegunTipo()
+    method condicionSegunCiudad() // este se llama PRIMITIVA, PUEDE HABER MAS DE UNA con esto, 
+                                  //creo una clase abstracta, no puedo hacer un const lugar = new Lugar 
 
-    method esTranquilo()
+    method esTranquilo() // No necesito clase abstracta para tener polimorfismo, lo dejo justificando que toda clase lugar esta obligada
+                        // a implementar un comportamiento frente a esTranquilo, sino lo tengo que sacar, en este caso lo dejo, en el parcial
+                        // ver si se deja o no
+                        // Si tuviera que definir una clase Lugar solo para esTranquilo(), no lo hago, en este caso no priorizaria la interfaz
 
     method esRaro() = self.letrasDelNombre() > 10
 
@@ -18,7 +24,7 @@ class Ciudad inherits Lugar{
     const property atracciones = []
     const property decibeles
 
-    override method condicionSegunTipo() = self.tieneMuchasAtracciones() && self.tieneMuchosHabitantes()
+    override method condicionSegunCiudad() = self.tieneMuchasAtracciones() && self.tieneMuchosHabitantes()
 
     method tieneMuchasAtracciones() = atracciones.size() > 3
 
@@ -34,7 +40,7 @@ class Pueblo inherits Lugar{
     const property provincia
     const provinciasDelLitoral = ["Entre Rios", "Corrientes", "Misiones"]
 
-    override method condicionSegunTipo() = self.esAntigua() || self.esDelLitoral()
+    override method condicionSegunCiudad() = self.esAntigua() || self.esDelLitoral()
 
     method esAntigua() = fechaFundacion.year() < 1800
 
@@ -44,10 +50,10 @@ class Pueblo inherits Lugar{
 }
 class Balneario inherits Lugar{
     const property metrosPlaya
-    const property marEsPeligroso
+    const property marEsPeligroso // declaro como const y genero un potencial objeto inmutable (esta es la justificacion)
     const property tienePeatonal
 
-    override method condicionSegunTipo() = self.tieneMuchaPlaya() && marEsPeligroso
+    override method condicionSegunCiudad() = self.tieneMuchaPlaya() && marEsPeligroso
 
     method tieneMuchaPlaya() = metrosPlaya > 300
 
@@ -55,139 +61,151 @@ class Balneario inherits Lugar{
 }
 
 //const mardel = new Balneario(nombre = "Mardel", metrosPlaya = 500, marEsPeligroso = true, tienePeatonal = false)
-// CUMPLE CRITERIO TRANQUILIDAD Y DIVERSION, NO CUMPLE RAREZA
+// elige CRITERIO TRANQUILIDAD Y DIVERSION, NO elige RAREZA
 
-// const liam = new Persona(preferencias = [diversion]) CUMPLE MARDEL
-// const noel = new Persona(preferencias = [tranquilidad]) CUMPLE MARDEL
-// const tyler = new Persona(preferencias = [rareza]) NO CUMPLE MARDEL
-// const joseph = new Persona(preferencias = [diversion, rareza]) CUMPLE MARDEL
+// const liam = new Persona(preferencias = diversion) elige MARDEL
+// const noel = new Persona(preferencias = tranquilidad) elige MARDEL
+// const tyler = new Persona(preferencias = rareza) NO elige MARDEL
+// const diversionRareza = new Combinacion(preferencias = [diversion, rareza])
+// const joseph = new Persona(preferencia = diversionRareza) elige MARDEL
 
-
-// Existen diferentes tipos de lugares:
-// ciudades: tienen una cierta cantidad de habitantes, atracciones turísticas 
-// (ej: "Obelisco", "Cabildo", "Rosedal", "Caminito") y sabemos la cantidad de decibeles promedio que tiene.
-// pueblos: nos interesa la extensión en km2, cuándo se fundó y en qué provincia se ubica.
-// balnearios: son una categoría especial, conocemos los metros de playa promedio que tienen, si el mar es 
-// peligroso y si tiene peatonal.
-
-// Queremos saber qué lugares son divertidos. Para todos los lugares, esto se da si tiene una cantidad par de letras. 
-// Además, para las ciudades, si tienen más de 3 atracciones turísticas y más de 100.000 habitantes. En el caso de los 
-// pueblos, debemos considerar además si se fundaron antes de 1800 o si son del Litoral 
-// ("Entre Ríos", "Corrientes" o "Misiones"). Y en el caso de los balnearios habrá que considerar si tiene más de 300 
-// metros de playa y si el mar es peligroso.
-
+//<<strategy stateless>>, no tienen parametros, todos tienen el mismo comportamiento para ese pueblo, ciudad, etc
 object tranquilidad{
-    method cumple(lugar) = lugar.esTranquilo()
+    method elige(lugar) = lugar.esTranquilo()
 }
 
 object diversion{
-    method cumple(lugar) = lugar.esDivertido()
+    method elige(lugar) = lugar.esDivertido()
 }
 
 object rareza{
-    method cumple(lugar) = lugar.esRaro()
+    method elige(lugar) = lugar.esRaro()
 }
 
-class Combinacion{
+class Combinacion{ // ACA IMPLEMENTAMOS COMPOSITE, las hojas (rareza, diversion y tranquilidad) son polimorifcas con las ramas (Combinacion)
     const preferencias = []
-    method cumple(lugar) = preferencias.any({preferencia => preferencia.cumple(lugar)})
+    method elige(lugar) = preferencias.any({preferencia => preferencia.elige(lugar)})
 }
 
+//<<context>>
 class Persona{
-    const property preferencia
+    var property preferencia
     const property presupuesto
 
-    method iriaDeVacaciones(lugar) = preferencia.cumple(lugar)
+    method iriaDeVacaciones(lugar) = preferencia.elige(lugar)
+
+    method puedePagar(monto) = monto <= presupuesto
+
 }
+// class Tour{
+//     const property diaSalida
+//     const property mesSalida
+//     const property anioSalida
 
-// Las personas tienen preferencias para irse de vacaciones:
-// algunos quieren tranquilidad, entonces el lugar al que se van debe ser tranquilo: para una ciudad esto significa que 
-// tenga menos de 20 decibeles, para un pueblo que esté en la provincia de La Pampa y para un balneario que no tenga peatonal
-//
-// otros quieren diversión, así que el lugar al que se van debe ser divertido
-//
-// están los que quieren irse a lugares raros: son aquellos cuyo nombre tiene más de 10 letras (por ejemplo "Saldungaray")
-//
-// y por último aquellos que combinan varios criterios (con que alguno de los criterios acepte entonces decide ir a ese lugar)
-// Nos interesa que una persona pueda cambiar su preferencia en forma simple, así como agregar nuevas preferencias a futuro.
+//     const property fechaSalida = new Date(year = anioSalida, month = mesSalida, day = diaSalida)  
+//     var property personasRequeridas
+//     const ciudades = []
+//     //const property montoXpersona
+//     //var property cupo = personasRequeridas
+//     const integrantes = []
 
-// Queremos saber si una persona se iría de vacaciones a un lugar en base a su preferencia.
+//     method puedoIncorporarPersonaAtour(persona) = 
+//     self.puedeEconomicamente(persona) 
+//     && 
+//     self.leGustanTodosLosLugares(persona)
+//     &&
+//     //personasRequeridas > 0
+//     self.hayLugar()
 
+//     method puedeEconomicamente(persona) = persona.presupuesto() > montoXpersona
 
+//     method leGustanTodosLosLugares(persona) = ciudades.all({ciudad => persona.iriaDeVacaciones(ciudad)})
 
-class Tour{
-    const property diaSalida
-    const property mesSalida
-    const property anioSalida
+//     method descuentoCapacidadDelTour() {cupo = cupo - 1}
 
-    const property fechaSalida = new Date(year = anioSalida, month = mesSalida, day = diaSalida)  
-    var property personasRequeridas
-    const ciudades = []
-    const property montoXpersona
-    var property cupo = personasRequeridas
+//     method incorporoPersonaAtour(persona){ 
+//     if (self.puedoIncorporarPersonaAtour(persona)) 
+//         (integrantes.add(persona))
+//     } // aca no pongo el exception ,porque no se que condicion no estoy cumpliendo
 
-    method puedoIncorporarPersonaAtour(persona) = 
-    self.puedeEconomicamente(persona) 
-    && 
-    self.leGustanTodosLosLugares(persona)
-    &&
-    personasRequeridas > 0
+//     method personaSeDaDeBaja() = 
+//     if (cupo < personasRequeridas) 
+//         {cupo = cupo + 1}
 
-    method puedeEconomicamente(persona) = persona.presupuesto() > montoXpersona
+//     method pendienteDeConfirmacion() = cupo > 0
 
-    method leGustanTodosLosLugares(persona) = ciudades.all({ciudad => persona.iriaDeVacaciones(ciudad)})
+// }
 
-    method descuentoCapacidadDelTour() {cupo = cupo - 1}
+class Tour{ // Lo importante del punto es saber donde poner las excepciones y donde no.
+    const integrantes = []
+    const destinos = []
+    var property montoTour
+    const cuposTotales
+    const listaDeEspera = []
+    const fecha
 
-    method incorporoPersonaAtour(persona) = 
-    if (self.puedoIncorporarPersonaAtour(persona)) 
-        (self.descuentoCapacidadDelTour())
+    method validarPago(persona) =
+        if (!(persona.puedePagar(montoTour))) //delego la responsabilidad de saber si puede pagar o no a la persona, si la manera d calcular el presupuesto de la persona cambia en un futuro, este metodo no se ve afectado
+            throw new DomainException(message = "Usted esta dispuesto a pagar menos que" + montoTour)
 
-    method personaSeDaDeBaja() = 
-    if (cupo < personasRequeridas) 
-        {cupo = cupo + 1}
+    method validarPreferencia(persona) =
+        if (!(self.eligeLugares(persona))) //de esta manera, la persona no tiene que conocer como implementa un tour los lugares. si manana el tour implementa de otra manera los lugares y delego el metodo a la persona, puedo romper
+            throw new DomainException(message = "Algun lugar no lo elegiria")
 
-    method pendienteDeConfirmacion() = cupo > 0
+    method validarCupos(persona) = 
+        if (!(self.estaConfirmado(persona))){
+            listaDeEspera.add(persona)
+            throw new DomainException(message = "El Tour esta confirmado. Quedas en la lista de espera")
+        }
 
+    method agregarPersona(persona){ // no agrego ni if ni and porque si falla alguno, las excepciones directamente me cortan el flujo de ejecucion
+        self.validarPago(persona)
+        self.eligeLugares(persona)
+        self.validarCupos(persona)
+        integrantes.add(persona)
+    }
+
+    method eligeLugares(persona) = destinos.all{lugar => persona.iriaDeVacaciones(lugar)}
+
+    method estaConfirmado(personas) = integrantes.size() < cuposTotales
+
+    method bajarPersona(persona){
+        integrantes.remove(persona)
+        self.agregarPersonaEnEspera()
+    }
+
+    method agregarPersonaEnEspera(){
+        const nuevoIntegrante = listaDeEspera.first()
+        listaDeEspera.remove(nuevoIntegrante)
+        integrantes.add(nuevoIntegrante)
+    }
+
+    method esDeEsteAnio() = fecha.year() == new Date().year()
+
+    method montoTotal() = montoTour * integrantes.size()
 }
 
 // const costa = new Tour(diaSalida = 12, mesSalida = 5, anioSalida = 2024, personasRequeridas = 2, ciudades = [mardel, clemente], montoXpersona = 1000)
-// NOEL LA CUMPLE, NO PUEDO INCORPORAR A LIAM (clemente no es divertida)
-
+// NOEL LA elige, NO PUEDO INCORPORAR A LIAM (clemente no es divertida)
 
 // const clemente = new Balneario(nombre = "Clemente", metrosPlaya = 500, marEsPeligroso = false, tienePeatonal = false)
 // const mardel = new Balneario(nombre = "Mardel", metrosPlaya = 500, marEsPeligroso = true, tienePeatonal = false)
 
-// const liam = new Persona(preferencias = [diversion], presupuesto = 20000) CUMPLE MARDEL
-// const noel = new Persona(preferencias = [tranquilidad], presupuesto = 20000) CUMPLE MARDEL
-// const tyler = new Persona(preferencias = [rareza]) NO CUMPLE MARDEL
-// const joseph = new Persona(preferencias = [diversion, rareza]) CUMPLE MARDEL
+// const liam = new Persona(preferencias = [diversion], presupuesto = 20000) elige MARDEL
+// const noel = new Persona(preferencias = [tranquilidad], presupuesto = 20000) elige MARDEL
+// const tyler = new Persona(preferencias = [rareza]) NO elige MARDEL
+// const joseph = new Persona(preferencias = [diversion, rareza]) elige MARDEL
 
-// Punto 3: Tour (4 puntos)
-// Queremos establecer el siguiente flujo para un tour:
-// Inicialmente definimos una fecha de salida, la cantidad de personas requerida, 
-// una lista de ciudades a recorrer y el monto a pagar por persona
-// Luego agregamos a una persona, para lo cual
-// el monto a pagar debe ser adecuado para la persona: cada persona define un presupuesto máximo para irse de vacaciones
-// todos los lugares deben ser adecuados para la persona, según lo definido en el punto anterior
-// en caso contrario, la persona no puede incorporarse al tour
-// cuando llegamos a la cantidad de personas requerida, el tour se confirma y no se permite incorporar más gente, 
-// a menos de que alguna persona se quiera bajar (ud. debe implementar la forma de lograr ésto)
-
-
-
+// la pregunta es donde vive la lista de tours
+// si es class, voy a tener varias intancias (no es lo que quiero
+// si los paso por parametro, donde voy almacenando los tours??, los necesito en produccion
 object chequeador{
     const property tours = []
     const property hoy = new Date()
 
-    method toursPendientes() = tours.filter({tour => tour.pendienteDeConfirmacion()})
-    method toursQueSalenEsteAnio() = tours.filter({tour => tour.fechaSalida().year() == hoy.year()})
+    method toursPendientes() = tours.filter({tour => !tour.estaConfirmado()})
+
+    method toursDeAnioActual() = tours.filter({tour => tour.esDeEsteAnio()})
+
+    method montoTotal() = self.toursDeAnioActual().sum{tour => tour.montoTotal()}
 }
-
-// Punto 4: Reportes (3 puntos)
-// Queremos saber:
-// Qué tours están pendientes de confirmación: son los que tienen menos cantidad de personas anotadas de las que el tour requiere.
-// Cuál es el total de los tours que salen este año, considerando el monto por persona * la cantidad de personas.
-// Se considerará explícitamente la delegación y la implementación de soluciones declarativas.
-
-
