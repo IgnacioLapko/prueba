@@ -1,31 +1,15 @@
-// Cada persona sabe su posición y qué elementos cerca tiene: sal, aceite, vinagre, aceto, oliva, 
-// cuchillo que corta bien, etc.
-// Queremos modelar que un comensal le pida a otro si le pasa una cosa.
-
-// Si la otra persona no tiene el elemento, la operaclassción no puede realizarse.
-
-// Lo que ocurre depende del criterio de cada persona tiene:
-// algunos son sordos, le pasan el primer elemento que tienen a mano
-// otros le pasan todos los elementos, “así me dejás comer tranquilo”
-// otros le piden que cambien la posición en la mesa, “así de paso charlo con otras personas” 
-// (ambos intercambian posiciones, A debe ir a la posición de B y viceversa)
-// y finalmente están las personas que le pasan el bendito elemento al otro comensal
-
-// Nos interesa que se puedan agregar nuevos criterios a futuro y que sea posible que una persona 
-// cambie de criterio dinámicamente (que pase de darle todos los elementos a sordo, por ejemplo). 
-// Cuando una persona le pasa un elemento a otro éste (el elemento) deja de estar cerca del comensal 
-// original para pasar a estar cerca del comensal que pidió el elemento.
-
 object sordo{
-    method aplicarCriterio(elemento, persona, otraPersona) {self.alcanzarPrimerElemento(persona, otraPersona) self.eliminarPrimerElemento(otraPersona)}
-
-    method alcanzarPrimerElemento(persona, otraPersona) {persona.tieneCerca().add(otraPersona.tieneCerca().first())}
-
-    method eliminarPrimerElemento(otraPersona) {otraPersona.remove(otraPersona.tieneCerca().first())}
+    method aplicarCriterio(elemento, persona, otraPersona) {
+        const primerElemento = otraPersona.tieneCerca().first()
+        persona.tomarElemento(primerElemento)
+        otraPersona.darElemento(primerElemento)
+        }
 }
 
 object todosLosElementos{
-    method aplicarCriterio(elemento, persona, otraPersona) {self.tomarTodosLosElementos(persona, otraPersona) self.borrarTodosLosElementos(otraPersona)}
+    method aplicarCriterio(elemento, persona, otraPersona) {
+        self.tomarTodosLosElementos(persona, otraPersona) 
+        self.borrarTodosLosElementos(otraPersona)}
 
     method tomarTodosLosElementos(persona, otraPersona) {persona.tieneCerca().addAll(otraPersona.tieneCerca())}
 
@@ -33,28 +17,134 @@ object todosLosElementos{
 }
 
 object cambioPosicion{
-    method aplicarCriterio(elemento, persona, otraPersona) {self.cambiarPosicion(persona, otraPersona) self.cambiarPosicion(otraPersona, persona)}
 
-    method cambiarPosicion(persona, otraPersona) {persona.posicion() = otraPersona.posicion()}
+    method aplicarCriterio(elemento, persona, otraPersona) {
+        const posicionOriginal = persona.posicion()
+
+        persona.cambiarPosicion(otraPersona.posicion()) 
+        otraPersona.cambiarPosicion(posicionOriginal)}
 }
 
 object benditoElemento{
-    method aplicarCriterio(elemento, persona, otraPersona) {self.alcanzarElemento(elemento, persona) self.borrarElemento(elemento, otraPersona)}
-
-    method alcanzarElemento(elemento, persona) {persona.tieneCerca().add(elemento)}
-
-    method borrarElemento(elemento, otraPersona) {otraPersona.tieneCerca().remove(elemento)}
+    method aplicarCriterio(elemento, persona, otraPersona) {
+        persona.tomarElemento(elemento)
+        otraPersona.darElemento(elemento)
+    }
 }
 
 class Persona{
-    var property posicion
+    var property posicion = null
     const property tieneCerca = []
-    var property criterio
+    var property criterioElemento = null
+    var property criterioComida = null
+    const property comidaIngerida = []
 
-    method pedirElemento(elemento, persona, otraPersona) = 
+    method pedirElemento(elemento, otraPersona) = 
     if (otraPersona.tieneCerca().contains(elemento)){
-        criterio.aplicarCriterio(elemento, persona, otraPersona)
+        otraPersona.criterioElemento().aplicarCriterio(elemento, self, otraPersona)
     }else{
-        throw new DomainException(message = "La otra persona no tiene el elemento:" + elemento)
+        throw new DomainException(message = "La otra persona no tiene la/el" + elemento + "cerca.")
     }
+
+    method cambiarPosicion(nuevaPosicion) {posicion = nuevaPosicion}
+
+    method tomarElemento(elemento) = self.tieneCerca().add(elemento)
+
+    method darElemento(elemento) = self.tieneCerca().remove(elemento)
+
+    method aceptaComida(bandeja) =
+    if (criterioComida.aceptaComida(bandeja)){
+        comidaIngerida.add(bandeja)
+    }else{
+        throw new DomainException(message = "La persona no acepta comer la/el "+ bandeja + " de la bandeja.")
+    }
+
+    method estaPipon() = comidaIngerida.any({comida => comida.esPesada()})
+
+    method laEstaPasandoBien() = self.comioAlgo() && self.condicionSecundaria()
+
+    method comioAlgo() = !comidaIngerida.isEmpty()
+
+    method condicionSecundaria() = true
+
+}
+
+// const juan = new Persona(posicion = "A", tieneCerca = ["ensalada", "cuchillo", "tenedor"], criterioElemento = sordo, criterioComida = vegetariano) esta pipon
+// const pedro = new Persona(posicion = "B", tieneCerca = ["banana", "mandarina"], criterioElemento = todosLosElementos, criterioComida = dietetico)
+// const lucas = new Persona(posicion = "C", tieneCerca = ["molleja", "chori"], criterioElemento = cambioPosicion ,criterioComida = alternado)
+// const alberto = new Persona(posicion = "D", tieneCerca = ["huevos", "cuchara"], criterioElemento = benditoElemento, criterioComida = combineta) no acepta ni superAlfajor ni pechitoDeCerdo, no esta pipon
+// const combineta = new Combinacion(criteriosComida = [vegetariano, dietetico])
+class Bandeja{
+    const property calorias
+    const property esCarne
+
+    method esPesada() = calorias > 500
+}
+
+object vegetariano{
+    method aceptaComida(bandeja) = !bandeja.esCarne()
+}
+
+object oms{
+    var property caloriasRecomendadas = 500
+}
+
+object dietetico{
+    method aceptaComida(bandeja) = bandeja.calorias() < oms.caloriasRecomendadas()
+}
+
+object alternado{
+    var property aceptaAlternado = false
+
+    method cambioAlternado() =
+    if (!aceptaAlternado){
+        aceptaAlternado = true
+        return aceptaAlternado
+    }else{
+        aceptaAlternado = false
+        return aceptaAlternado
+    }
+
+    method aceptaComida(bandeja) = self.cambioAlternado()
+}
+
+class Combinacion{
+    const criteriosComida = []
+
+    method aceptaComida(bandeja) = criteriosComida.all({criterio => criterio.aceptaComida(bandeja)})
+}
+
+// const pechitoDeCerdo = new Bandeja(calorias = 270, esCarne = true)
+// const superAlfajor = new Bandeja(calorias = 800, esCarne = false)
+// const ensalada = new Bandeja(calorias = 100, esCarne = false)
+
+// Punto 3) Pipón - 2 puntos
+// Queremos saber si un comensal está pipón, esto ocurre si alguna de las comidas 
+// que ingirió es pesada (insume más de 500 calorias).
+
+// Punto 4) ¡Qué bien la estoy pasando! - 3 puntos
+// Queremos saber si un comensal la está pasando bien en el asado, esto ocurre en general si esa persona comió algo y
+// Osky no pone objeciones, siempre la pasa bien
+// Moni si se sentó en la mesa en la posición 1@1
+// Facu si comió carne
+// Vero si no tiene más de 3 elementos cerca
+
+object osky inherits Persona{
+    override method condicionSecundaria() = true
+}
+
+object moni inherits Persona{
+    override method condicionSecundaria() = posicion == "1@1"
+}
+
+object facu inherits Persona{
+    override method condicionSecundaria() = self.comioCarne() 
+
+    method comioCarne() = comidaIngerida.any({comida => comida.esCarne()})
+}
+
+object vero inherits Persona{
+    override method condicionSecundaria() = self.pocosElementosCerca()
+
+    method pocosElementosCerca() = tieneCerca.size() <= 3
 }
